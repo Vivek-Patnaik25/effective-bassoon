@@ -61,6 +61,16 @@ app.add_middleware(
 )
 
 
+@app.get("/")
+def health_check():
+    return {
+        "status": "healthy",
+        "service": "Surgical Tool Tracking & Gesture Recognition API",
+        "version": "1.0.0",
+        "docs": "/docs",
+    }
+
+
 class LoginBody(BaseModel):
     username: str
     password: str

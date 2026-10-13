@@ -1,0 +1,24 @@
+{
+  "model": "yolov8n.pt",
+  "epochs": 50,
+  "batch_size": 16,
+  "imgsz": 640,
+  "map50": 0.9408,
+  "map50_95": 0.8292,
+  "precision": 0.8346,
+  "recall": 0.881,
+  "per_class_ap50": {
+    "scalpel": 0.9024,
+    "straight_dissection_clamp": 0.9695,
+    "straight_mayo_scissor": 0.9366,
+    "curved_mayo_scissor": 0.9548
+  },
+  "classes": [
+    "scalpel",
+    "straight_dissection_clamp",
+    "straight_mayo_scissor",
+    "curved_mayo_scissor"
+  ],
+  "dataset": "Labeled Surgical Tools and Images (Lavado et al., 2018)",
+  "target_met": true
+}

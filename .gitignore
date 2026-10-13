@@ -1,0 +1,31 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+data/
+
+# Model checkpoints (except best.pt for deployment)
+perception/weights/last.pt
+
+# Training datasets & scratch
+samples/tool_clip.mp4
+samples/tool_clip.avi
+samples/detections.jsonl
+gestures/hand_landmarker.task
+
+# Frontend build artifacts
+web/node_modules/
+web/dist/
+
+# Exclude notebooks as requested
+*.ipynb
+kaggle_res/*.ipynb
+
+# Exclude internal planning documents (keep only README.md)
+DEPLOYMENT.md
+features.md
+progress.md
+task_split.md
+TEAM_CONTRIBUTIONS.md
+user_stories.md

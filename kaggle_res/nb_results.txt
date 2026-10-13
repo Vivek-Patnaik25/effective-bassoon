@@ -1,0 +1,504 @@
+Total cells: 45, with outputs: 29
+
+
+======================================================================
+Cell 2: !pip install -q ultralytics
+======================================================================
+  [2K     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 46.9/46.9 kB 1.1 MB/s eta 0:00:00
+  [2K   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.4/1.4 MB 13.9 MB/s eta 0:00:00
+  [2K   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 96.5/96.5 kB 4.8 MB/s eta 0:00:00
+  [?25h
+
+======================================================================
+Cell 3: import os, shutil, json, glob, re
+======================================================================
+  Imports OK
+
+======================================================================
+Cell 5: # Kaggle mounts datasets under /kaggle/input/... (new layout: /kaggle/input/datasets/<owne
+======================================================================
+  Dataset root: /kaggle/input/datasets/dilavado/labeled-surgical-tools/Surgical-Dataset
+  Images: /kaggle/input/datasets/dilavado/labeled-surgical-tools/Surgical-Dataset/Images
+  Labels: /kaggle/input/datasets/dilavado/labeled-surgical-tools/Surgical-Dataset/Labels
+  Splits: /kaggle/input/datasets/dilavado/labeled-surgical-tools/Surgical-Dataset/Test-Train Groups
+
+======================================================================
+Cell 6: # Explore directory structure
+======================================================================
+  ============================================================
+  IMAGES subdirectories:
+    All/  (3009 images)
+    Curved Mayo Scissor/  (812 images)
+    Four classes separate/  (100 images)
+    Scalpel/  (740 images)
+    Straight Dissection Clamp/  (686 images)
+    Straight Mayo Scissor/  (671 images)
+  
+  LABELS subdirectories:
+    README.txt  (file)
+    label object names/  (3009 label files)
+    label top-bottom/  (3009 label files)
+  
+  SPLIT files:
+    test-obj_detector.txt
+    train-obj_detector.txt
+
+======================================================================
+Cell 7: # Read the Labels README if it exists
+======================================================================
+  === Labels/README.txt ===
+  This dataset was used for both object detection (1st folder), as well as in occlusion reasoning (2nd folder) in which on top means is not occluded and bottom means that the object is occluded.
+  
+  For object detection:
+  0- Scalpel n�4
+  1- Straight Dissection Clamp
+  2- Straight Mayo Scissor
+  3- Curved Mayo Scissor
+  
+  For occlusion reasoning:
+  0- bottom
+  1- top
+
+======================================================================
+Cell 9: # Inspect a few label files to determine format
+======================================================================
+  LABEL OBJECT NAMES:
+  Found: label object names
+  
+  --- bisturi1.txt (1 lines) ---
+    0 0.531250 0.478472 0.054688 0.476389
+  
+  --- bisturi10.txt (1 lines) ---
+    0 0.589844 0.462500 0.107813 0.458333
+  
+  --- bisturi100.txt (1 lines) ---
+    0 0.617969 0.537500 0.231250 0.383333
+  
+  --- bisturi101.txt (1 lines) ---
+    0 0.627734 0.537500 0.094531 0.472222
+  
+  --- bisturi102.txt (1 lines) ---
+    0 0.628516 0.536111 0.061719 0.477778
+  
+  ============================================================
+  LABEL TOP-BOTTOM:
+  Found: label top-bottom
+  
+  --- bisturi1.txt (1 lines) ---
+    1 0.531250 0.478472 0.054688 0.476389
+  
+  --- bisturi10.txt (1 lines) ---
+    1 0.589844 0.462500 0.107813 0.458333
+  
+  --- bisturi100.txt (1 lines) ---
+    1 0.617969 0.537500 0.231250 0.383333
+  
+  --- bisturi101.txt (1 lines) ---
+    1 0.627734 0.537500 0.094531 0.472222
+  
+  --- bisturi102.txt (1 lines) ---
+    1 0.628516 0.536111 0.061719 0.477778
+
+======================================================================
+Cell 11: # Class mapping
+======================================================================
+  Classes: {0: 'scalpel', 1: 'straight_dissection_clamp', 2: 'straight_mayo_scissor', 3: 'curved_mayo_scissor'}
+  normalize test: 3 == 3
+  normalize test: 0 == 0
+
+======================================================================
+Cell 12: # Build a master index: image_stem -> image_path
+======================================================================
+  Total unique images found: 3009
+    bisturi1 -> Images/All/images/bisturi1.jpg
+    bisturi10 -> Images/All/images/bisturi10.jpg
+    bisturi100 -> Images/All/images/bisturi100.jpg
+    bisturi101 -> Images/All/images/bisturi101.jpg
+    bisturi102 -> Images/All/images/bisturi102.jpg
+
+======================================================================
+Cell 14: def detect_label_format(label_path):
+======================================================================
+  Label parsers defined OK
+
+======================================================================
+Cell 15: # Build label index: image_stem -> list of YOLO annotation lines
+======================================================================
+  Processing label object names/ ...
+  
+  ============================================================
+  Label format distribution: {}
+  Annotations per class: {}
+  Total images with labels: 0
+  Total annotation boxes: 0
+
+======================================================================
+Cell 16: # FALLBACK: If label object names did not work well,
+======================================================================
+  [!] Few labels found via folder structure. Trying alternative parsing...
+  After fallback: 3009 images with labels
+  Annotations per class: {0: 1938, 1: 4363, 2: 971, 3: 1142}
+
+======================================================================
+Cell 18: def load_split_file(path):
+======================================================================
+  Official split - Train: 1834, Test: 786
+  Overlap: 0
+  
+  Train samples: ['bisturi10', 'bisturi101', 'bisturi102', 'bisturi108', 'bisturi109']
+  Test samples:  ['bisturi1', 'bisturi100', 'bisturi103', 'bisturi104', 'bisturi107']
+
+======================================================================
+Cell 19: # Show first few lines of split files raw
+======================================================================
+  train-obj_detector.txt - first 5 lines:
+    '/home/roboticslab/darknet/Dataset/images/bisturi469.jpg'
+    '/home/roboticslab/darknet/Dataset/images/bisturi199.jpg'
+    '/home/roboticslab/darknet/Dataset/images/bisturi432.jpg'
+    '/home/roboticslab/darknet/Dataset/images/bisturi446.jpg'
+    '/home/roboticslab/darknet/Dataset/images/bisturi430.jpg'
+    ... total 1834 lines
+  
+  test-obj_detector.txt - first 5 lines:
+    '/home/roboticslab/darknet/Dataset/images/bisturi216.jpg'
+    '/home/roboticslab/darknet/Dataset/images/bisturi234.jpg'
+    '/home/roboticslab/darknet/Dataset/images/bisturi120.jpg'
+    '/home/roboticslab/darknet/Dataset/images/bisturi204.jpg'
+    '/home/roboticslab/darknet/Dataset/images/bisturi178.jpg'
+    ... total 786 lines
+
+======================================================================
+Cell 21: WORK_DIR = Path('/kaggle/working/surgical_yolo')
+======================================================================
+  YOLO dataset dir: /kaggle/working/surgical_yolo
+
+======================================================================
+Cell 22: # Copy images & write YOLO labels
+======================================================================
+  ============================================================
+  Dataset assembled:
+    Train: 2139 images
+    Val:   870 images
+    No image found: 0 | Not in split: 389
+
+======================================================================
+Cell 23: # Deduplicate label files (remove duplicate lines from append)
+======================================================================
+  Deduplicated 947 label files
+
+======================================================================
+Cell 24: # Write data.yaml
+======================================================================
+  data.yaml written to /kaggle/working/surgical_yolo/data.yaml
+  path: /kaggle/working/surgical_yolo
+  train: images/train
+  val: images/val
+  
+  nc: 4
+  names:
+    0: scalpel
+    1: straight_dissection_clamp
+    2: straight_mayo_scissor
+    3: curved_mayo_scissor
+
+======================================================================
+Cell 26: # Count labels per class in final dataset
+======================================================================
+  Final YOLO dataset - 7393 boxes total:
+    Class 0 (scalpel): 1747
+    Class 1 (straight_dissection_clamp): 3533
+    Class 2 (straight_mayo_scissor): 971
+    Class 3 (curved_mayo_scissor): 1142
+  
+  [OK] All 4 classes present
+
+======================================================================
+Cell 27: # Visualize a few annotated samples
+======================================================================
+  [IMAGE/DISPLAY: ['image/png', 'text/plain']]
+
+======================================================================
+Cell 28: # Class distribution bar chart
+======================================================================
+  [IMAGE/DISPLAY: ['image/png', 'text/plain']]
+
+======================================================================
+Cell 30: from ultralytics import YOLO
+======================================================================
+  Creating new Ultralytics Settings v0.0.8 file ✅ 
+  View Ultralytics Settings with 'yolo settings' or at '/root/.config/Ultralytics/settings.json'
+  Update Settings with 'yolo settings key=value', i.e. 'yolo settings runs_dir=path/to/dir'. For help see https://docs.ultralytics.com/usage/settings.
+  Device: cuda
+  GPU: Tesla T4
+  VRAM: 15.6 GB
+
+======================================================================
+Cell 31: # Training hyperparameters
+======================================================================
+  Training config:
+    Model:  yolov8n.pt
+    Epochs: 50
+    Batch:  16
+    ImgSz:  640
+    Device: cuda
+
+======================================================================
+Cell 32: # Train
+======================================================================
+  [KDownloading https://github.com/ultralytics/assets/releases/download/v8.4.0/yolov8n.pt to 'yolov8n.pt': 100% ━━━━━━━━━━━━ 6.2MB 76.5MB/s 0.1s
+  Ultralytics 8.4.175 🚀 Python-3.13.15 torch-2.11.0+cu128 CUDA:0 (Tesla T4, 14912MiB)
+  engine/trainer: agnostic_nms=False, amp=True, angle=1.0, augment=False, auto_augment=randaugment, batch=16, bgr=0.0, box=7.5, cache=False, cfg=None, channels_last=None, classes=None, close_mosaic=10, cls=0.5, cls_pw=0.0, cls_remap=True, compile=False, conf=None, copy_paste=0.0, copy_paste_mode=flip, cos_lr=False, cutmix=0.0, data=/kaggle/working/surgical_yolo/data.yaml, degrees=15.0, deterministic=True, device=0, dfl=1.5, dgrad=0.5, dis=6.0, distill_model=None, dlam=1.0, dlog=1.0, dnn=False, dropout=0.0, dynamic=False, embed=None, epochs=50, erasing=0.4, exist_ok=True, fliplr=0.5, flipud=0.5, format=torchscript, fraction=1.0, freeze=None, hsv_h=0.015, hsv_s=0.7, hsv_v=0.4, imgsz=640, iou=0.7, kobj=1.0, line_width=None, lr0=0.01, lrf=0.01, mask_ratio=4, max_det=300, mixup=0.1, mode=train, model=yolov8n.pt, momentum=0.937, mosaic=1.0, multi_scale=0.0, name=surgical_yolov8n, nbs=64, nms=None, opset=None, optimize=False, optimizer=auto, overlap_mask=True, patience=15, perspective=0.0, plots=True, pose=12.0, pretrained=True, profile=False, project=/kaggle/working/runs, quantize=None, rect=False, resume=False, retina_masks=False, rle=1.0, save=True, save_conf=False, save_crop=False, save_dir=/kaggle/working/runs/surgical_yolov8n, save_frames=False, save_json=False, save_period=10, save_txt=False, scale=0.5, seed=0, shear=0.0, show=False, show_boxes=True, show_conf=True, show_labels=True, simplify=True, single_cls=False, source=None, split=val, stream_buffer=False, task=detect, time=None, tracker=tracktrack.yaml, translate=0.1, val=True, verbose=True, vid_stride=1, visualize=False, warmup_bias_lr=0.1, warmup_epochs=3.0, warmup_momentum=0.8, weight_decay=0.0005, workers=8, workspace=None
+  [KDownloading https://ultralytics.com/assets/Arial.ttf to '/root/.config/Ultralytics/Arial.ttf': 100% ━━━━━━━━━━━━ 755.1KB 15.0MB/s 0.0s
+  Overriding model.yaml nc=80 with nc=4
+  
+                     from  n    params  module                                       arguments                     
+    0                  -1  1       464  ultralytics.nn.modules.conv.Conv             [3, 16, 3, 2]                 
+    1                  -1  1      4672  ultralytics.nn.modules.conv.Conv             [16, 32, 3, 2]                
+    2                  -1  1      7360  ultralytics.nn.modules.block.C2f             [32, 32, 1, True]             
+    3                  -1  1     18560  ultralytics.nn.modules.conv.Conv             [32, 64, 3, 2]                
+    4                  -1  2     49664  ultralytics.nn.modules.block.C2f             [64, 64, 2, True]             
+    5                  -1  1     73984  ultralytics.nn.modules.conv.Conv             [64, 128, 3, 2]               
+    6                  -1  2    197632  ultralytics.nn.modules.block.C2f             [128, 128, 2, True]           
+    7                  -1  1    295424  ultralytics.nn.modules.conv.Conv             [128, 256, 3, 2]              
+    8                  -1  1    460288  ultralytics.nn.modules.block.C2f             [256, 256, 1, True]           
+    9                  -1  1    164608  ultralytics.nn.modules.block.SPPF            [256, 256, 5]                 
+   10                  -1  1         0  torch.nn.modules.upsampling.Upsample         [None, 2, 'nearest']          
+   11             [-1, 6]  1         0  ultralytics.nn.modules.conv.Concat           [1]                           
+   12                  -1  1    148224  ultralytics.nn.modules.block.C2f             [384, 128, 1]                 
+   13                  -1  1         0  torch.nn.modules.upsampling.Upsample         [None, 2, 'nearest']          
+   14             [-1, 4]  1         0  ultralytics.nn.modules.conv.Concat           [1]                           
+   15                  -1  1     37248  ultralytics.nn.modules.block.C2f             [192, 64, 1]                  
+   16                  -1  1     36992  ultralytics.nn.modules.conv.Conv             [64, 64, 3, 2]                
+   17            [-1, 12]  1         0  ultralytics.nn.modules.conv.Concat           [1]                           
+   18                  -1  1    123648  ultralytics.nn.modules.block.C2f             [192, 128, 1]                 
+   19                  -1  1    147712  ultralytics.nn.modules.conv.Conv             [128, 128, 3, 2]              
+   20             [-1, 9]  1         0  ultralytics.nn.modules.conv.Concat           [1]                           
+   21                  -1  1    493056  ultralytics.nn.modules.block.C2f             [384, 256, 1]                 
+   22        [15, 18, 21]  1    752092  ultralytics.nn.modules.head.Detect           [4, 16, None, [64, 128, 256]] 
+  Model summary: 129 layers, 3,011,628 parameters, 3,011,612 gradients, 8.2 GFLOPs
+  
+  Transferred 349/355 items from pretrained weights
+  Freezing layer 'model.22.dfl.conv.weight'
+  AMP: running Automatic Mixed Precision (AMP) checks...
+  AMP: downloading yolo26n.pt for AMP checks (one-time, not used for training)...
+  [KDownloading https://github.com/ultralytics/assets/releases/download/v8.4.0/yolo26n.pt to 'weights/yolo26n.pt': 100% ━━━━━━━━━━━━ 5.3MB 15.4MB/s 0.3s
+  AMP: checks passed ✅
+  train: Fast image access ✅ (ping: 0.0±0.0 ms, read: 1131.2±746.8 MB/s, size: 66.8 KB)
+  [Ktrain: Scanning /kaggle/working/surgical_yolo/labels/train... 2139 images, 0 backgrounds, 0 corrupt: 100% ━━━━━━━━━━━━ 2139/2139 1.3Kit/s 1.7s
+  train: New cache created: /kaggle/working/surgical_yolo/labels/train.cache
+  albumentations: Blur(p=0.01, blur_limit=(3, 7)), MedianBlur(p=0.01, blur_limit=(3, 7)), ToGray(p=0.01, method='weighted_average', num_output_channels=3), CLAHE(p=0.01, clip_limit=(1.0, 4.0), tile_grid_size=(8, 8))
+  val: Fast image access ✅ (ping: 0.0±0.0 ms, read: 2116.0±699.1 MB/s, size: 69.0 KB)
+  [Kval: Scanning /kaggle/working/surgical_yolo/labels/val... 870 images, 0 backgrounds, 0 corrupt: 100% ━━━━━━━━━━━━ 870/870 1.3Kit/s 0.7s
+  val: New cache created: /kaggle/working/surgical_yolo/labels/val.cache
+  optimizer: 'optimizer=auto' found, ignoring 'lr0=0.01' and determining best 'optimizer' and 'lr0' automatically... 
+  optimizer: AdamW(lr=0.00125, momentum=0.9) with parameter groups 57 weight(decay=0.0), 64 weight(decay=0.0005), 63 bias(decay=0.0)
+  Plotting labels to /kaggle/working/runs/surgical_yolov8n/labels.jpg... 
+  Using 2139 train, 870 val images for fraction=1.0 at imgsz=640
+  Using 2 dataloader workers
+  Logging results to /kaggle/working/runs/surgical_yolov8n
+  Starting training for 50 epochs...
+  
+        Epoch    GPU_mem   box_loss   cls_loss   dfl_loss  Instances       Size
+  [K       1/50      2.03G      1.728      3.124      1.766         56        640: 100% ━━━━━━━━━━━━ 134/134 7.1it/s 18.9s
+  [K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 100% ━━━━━━━━━━━━ 28/28 6.1it/s 4.6s
+                     all        870       2127      0.509      0.624      0.498      0.285
+  
+        Epoch    GPU_mem   box_loss   cls_loss   dfl_loss  Instances       Size
+  [K       2/50      2.32G      1.506      1.907      1.536         99        640: 0% ──────────── 1/134 1.6it/s 0.2s<1:24
+  /usr/local/lib/python3.13/dist-packages/ray/train/_internal/session.py:683: UserWarning: `get_trial_id` is meant to only be called inside a function that is executed by a Tuner or Trainer. Returning `None`.
+    warnings.warn(
+  [stream - 263 lines, showing first 15 + last 50]
+  [K       2/50      2.32G      1.598       1.88      1.679         66        640: 100% ━━━━━━━━━━━━ 134/134 8.5it/s 15.7s
+  [K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 100% ━━━━━━━━━━━━ 28/28 7.3it/s 3.9s
+                     all        870       2127      0.478       0.65      0.523      0.292
+  
+        Epoch    GPU_mem   box_loss   cls_loss   dfl_loss  Instances       Size
+  [K       3/50      2.32G       1.59      1.811        1.7         63        640: 100% ━━━━━━━━━━━━ 134/134 8.4it/s 15.9s
+  [K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 100% ━━━━━━━━━━━━ 28/28 7.3it/s 3.8s
+                     all        870       2127      0.497      0.628      0.527      0.251
+  
+        Epoch    GPU_mem   box_loss   cls_loss   dfl_loss  Instances       Size
+  [K       4/50      2.32G      1.551      1.743      1.677         83        640: 100% ━━━━━━━━━━━━ 134/134 8.5it/s 15.7s
+  [K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 100% ━━━━━━━━━━━━ 28/28 7.1it/s 3.9s
+                     all        870       2127      0.488        0.7      0.577      0.306
+  
+        Epoch    GPU_mem   box_loss   cls_loss   dfl_loss  Instances       Size
+  ... (198 lines omitted) ...
+  [K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 100% ━━━━━━━━━━━━ 28/28 6.6it/s 4.2s
+                     all        870       2127       0.81      0.862      0.926      0.794
+  
+        Epoch    GPU_mem   box_loss   cls_loss   dfl_loss  Instances       Size
+  [K      45/50      2.32G     0.5647     0.5931     0.9599         23        640: 100% ━━━━━━━━━━━━ 134/134 8.8it/s 15.2s
+  [K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 100% ━━━━━━━━━━━━ 28/28 6.6it/s 4.2s
+                     all        870       2127      0.826      0.865      0.928      0.819
+  
+        Epoch    GPU_mem   box_loss   cls_loss   dfl_loss  Instances       Size
+  [K      46/50      2.32G     0.5482     0.5803     0.9555         30        640: 100% ━━━━━━━━━━━━ 134/134 8.8it/s 15.3s
+  [K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 100% ━━━━━━━━━━━━ 28/28 6.7it/s 4.2s
+                     all        870       2127      0.818      0.876      0.931      0.806
+  
+        Epoch    GPU_mem   box_loss   cls_loss   dfl_loss  Instances       Size
+  [K      47/50      2.32G     0.5487     0.5719     0.9551         24        640: 100% ━━━━━━━━━━━━ 134/134 8.9it/s 15.0s
+  [K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 100% ━━━━━━━━━━━━ 28/28 6.5it/s 4.3s
+                     all        870       2127      0.826      0.869      0.928        0.8
+  
+        Epoch    GPU_mem   box_loss   cls_loss   dfl_loss  Instances       Size
+  [K      48/50      2.32G     0.5449     0.5665     0.9491         27        640: 100% ━━━━━━━━━━━━ 134/134 8.6it/s 15.5s
+  [K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 100% ━━━━━━━━━━━━ 28/28 6.7it/s 4.2s
+                     all        870       2127       0.81      0.874      0.929      0.815
+  
+        Epoch    GPU_mem   box_loss   cls_loss   dfl_loss  Instances       Size
+  [K      49/50      2.32G     0.5285     0.5521      0.947         29        640: 100% ━━━━━━━━━━━━ 134/134 8.7it/s 15.4s
+  [K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 100% ━━━━━━━━━━━━ 28/28 6.6it/s 4.2s
+                     all        870       2127      0.825       0.87      0.934      0.828
+  
+        Epoch    GPU_mem   box_loss   cls_loss   dfl_loss  Instances       Size
+  [K      50/50      2.32G     0.5189     0.5424     0.9407         28        640: 100% ━━━━━━━━━━━━ 134/134 8.7it/s 15.5s
+  [K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 100% ━━━━━━━━━━━━ 28/28 6.5it/s 4.3s
+                     all        870       2127      0.834      0.883      0.941      0.829
+  
+  50 epochs completed in 0.288 hours.
+  Optimizer stripped from /kaggle/working/runs/surgical_yolov8n/weights/last.pt, 6.5MB
+  Optimizer stripped from /kaggle/working/runs/surgical_yolov8n/weights/best.pt, 6.5MB
+  
+  Validating /kaggle/working/runs/surgical_yolov8n/weights/best.pt...
+  Ultralytics 8.4.175 🚀 Python-3.13.15 torch-2.11.0+cu128 CUDA:0 (Tesla T4, 14912MiB)
+  Model summary (fused): 73 layers, 3,133,436 parameters, 0 gradients, 8.6 GFLOPs
+  [K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 100% ━━━━━━━━━━━━ 28/28 4.0it/s 7.0s
+                     all        870       2127      0.833      0.883       0.94      0.829
+                 scalpel        441        499      0.816      0.802      0.902      0.718
+  straight_dissection_clamp        870       1023      0.886      0.926      0.969      0.853
+   straight_mayo_scissor        285        285      0.836      0.859      0.936      0.856
+     curved_mayo_scissor        320        320      0.796      0.944      0.955      0.889
+  Speed: 0.3ms preprocess, 2.1ms inference, 0.0ms loss, 1.0ms postprocess per image
+  Results saved to /kaggle/working/runs/surgical_yolov8n
+  
+  Training complete!
+
+======================================================================
+Cell 34: # Validate on the test split
+======================================================================
+  Ultralytics 8.4.175 🚀 Python-3.13.15 torch-2.11.0+cu128 CUDA:0 (Tesla T4, 14912MiB)
+  Model summary (fused): 73 layers, 3,133,436 parameters, 0 gradients, 8.6 GFLOPs
+  val: Fast image access ✅ (ping: 0.0±0.0 ms, read: 1408.5±533.9 MB/s, size: 64.3 KB)
+  [Kval: Scanning /kaggle/working/surgical_yolo/labels/val.cache... 870 images, 0 backgrounds, 0 corrupt: 100% ━━━━━━━━━━━━ 870/870 18.3Mit/s 0.0s
+  [K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 100% ━━━━━━━━━━━━ 55/55 6.5it/s 8.5s
+                     all        870       2127      0.835      0.881      0.941      0.829
+                 scalpel        441        499       0.82      0.798      0.902      0.718
+  straight_dissection_clamp        870       1023      0.887      0.926      0.969      0.853
+   straight_mayo_scissor        285        285      0.836      0.857      0.937      0.856
+     curved_mayo_scissor        320        320      0.796      0.944      0.955      0.889
+  Speed: 1.0ms preprocess, 3.4ms inference, 0.0ms loss, 1.3ms postprocess per image
+  Results saved to /kaggle/working/runs/detect/val
+  
+  ============================================================
+  VALIDATION RESULTS
+  ============================================================
+    mAP@0.5:      0.9408  [OK]
+    mAP@0.5:0.95: 0.8292
+    Precision:     0.8346
+    Recall:        0.8810
+  
+    Per-class AP@0.5:
+      scalpel                        0.9024
+      straight_dissection_clamp      0.9695
+      straight_mayo_scissor          0.9366
+      curved_mayo_scissor            0.9548
+  ============================================================
+
+======================================================================
+Cell 35: # Save metrics JSON
+======================================================================
+  Metrics saved: /kaggle/working/metrics.json
+  {
+    "model": "yolov8n.pt",
+    "epochs": 50,
+    "batch_size": 16,
+    "imgsz": 640,
+    "map50": 0.9408,
+    "map50_95": 0.8292,
+    "precision": 0.8346,
+    "recall": 0.881,
+    "per_class_ap50": {
+      "scalpel": 0.9024,
+      "straight_dissection_clamp": 0.9695,
+      "straight_mayo_scissor": 0.9366,
+      "curved_mayo_scissor": 0.9548
+    },
+    "classes": [
+      "scalpel",
+      "straight_dissection_clamp",
+      "straight_mayo_scissor",
+      "curved_mayo_scissor"
+    ],
+    "dataset": "Labeled Surgical Tools and Images (Lavado et al., 2018)",
+    "target_met": true
+  }
+
+======================================================================
+Cell 37: RUN_DIR = Path('/kaggle/working/runs/surgical_yolov8n')
+======================================================================
+  best.pt copied to /kaggle/working/best.pt (6.2 MB)
+     -> Download this and place at: perception/weights/best.pt
+     last.pt also saved as backup
+
+======================================================================
+Cell 39: # Display training plots generated by Ultralytics
+======================================================================
+  --- results.png ---
+  [IMAGE/DISPLAY: ['image/png', 'text/plain']]
+  --- confusion_matrix.png ---
+  [IMAGE/DISPLAY: ['image/png', 'text/plain']]
+  --- confusion_matrix_normalized.png ---
+  [IMAGE/DISPLAY: ['image/png', 'text/plain']]
+  [!] F1_curve.png not found
+    [!] P_curve.png not found
+    [!] R_curve.png not found
+    [!] PR_curve.png not found
+    [!] val_batch0_pred.png not found
+    [!] val_batch1_pred.png not found
+
+======================================================================
+Cell 41: if output_best.exists():
+======================================================================
+  [IMAGE/DISPLAY: ['image/png', 'text/plain']]
+  Inference visualization saved
+
+======================================================================
+Cell 43: print('')
+======================================================================
+  ==============================================================
+    SURGICAL TOOL DETECTION - TRAINING COMPLETE
+  ==============================================================
+  
+    Dataset: Labeled Surgical Tools and Images
+    Authors: Lavado, da Silva, Caramelo (2018)
+    Model:   YOLOv8n (nano)
+  
+    Classes:
+      0 - scalpel
+      1 - straight_dissection_clamp
+      2 - straight_mayo_scissor
+      3 - curved_mayo_scissor
+  
+    DOWNLOAD FILES:
+      best.pt      -> perception/weights/best.pt
+      metrics.json  -> perception/weights/metrics.json
+  
+    Citation:
+      Diana Lavado, Joaquim da Silva, Francisco Caramelo.
+      Labeled Surgical Tools and Images. 2018.
+      kaggle.com/datasets/dilavado/labeled-surgical-tools
+  ==============================================================
+  
+  mAP@0.5: 0.9408 [TARGET MET >= 0.80]
+  
+  Output files in /kaggle/working/:
+      __notebook__.ipynb                          5.3 MB
+      best.pt                                     6.2 MB
+      class_distribution.png                     39.2 KB
+      inference_samples.png                     752.6 KB
+      last.pt                                     6.2 MB
+      metrics.json                                0.5 KB
+      sample_annotations.png                      1.3 MB
+      yolov8n.pt                                  6.2 MB

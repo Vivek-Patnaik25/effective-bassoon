@@ -62,11 +62,17 @@ def tools_at(frame_index: int) -> list[dict]:
 def ensure_samples(directory: Path | None = None) -> tuple[Path, Path]:
     directory = directory or samples_dir()
     directory.mkdir(parents=True, exist_ok=True)
-    labels = directory / "detections.jsonl"
-    video = _existing_clip(directory)
-    if video is not None and labels.exists() and labels.stat().st_size > 0:
+    video = directory / "clinical_bench.mp4"
+    labels = directory / "bench_labels.jsonl"
+    if video.exists() and labels.exists() and labels.stat().st_size > 0:
         return video, labels
+    for v_name in ("tool_clip.mp4", "tool_clip.avi"):
+        path = directory / v_name
+        det = directory / "detections.jsonl"
+        if path.exists() and det.exists():
+            return path, det
     video = directory / "tool_clip.mp4"
+    labels = directory / "detections.jsonl"
     _write(video, labels)
     return video, labels
 

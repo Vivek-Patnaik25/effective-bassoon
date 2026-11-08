@@ -21,7 +21,7 @@ def read_tools(backend, frame):
 
 def open_perception(source_mode: str | None = None):
     mode = (source_mode or os.environ.get("DETECTION_SOURCE", "yolo")).strip().lower()
-    if mode == "yolo":
+    if mode in ("yolo", "camera", "live"):
         yolo = _open_yolo()
         if yolo is not None:
             return yolo
@@ -56,11 +56,11 @@ class ReplaySource:
         self.eof = False
 
     def read(self):
-        if self.eof:
-            return None, []
         ok, frame = self.capture.read()
         if not ok or self.index >= len(self.records):
-            self.eof = True
+            self.rewind()
+            ok, frame = self.capture.read()
+        if not ok:
             return None, []
         tools = self.read_tools(frame)
         self.index += 1

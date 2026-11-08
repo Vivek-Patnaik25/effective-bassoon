@@ -4,7 +4,7 @@ import { CATEGORIES, COLORS, SHORT_LABELS, eventLabel, labelFor } from "./labels
 
 export default function Live() {
   const [name, setName] = useState("PROCEDURE-REF-08 // LAPAROSCOPIC CHOLECYSTECTOMY");
-  const [sourceMode, setSourceMode] = useState("simulation");
+  const [sourceMode, setSourceMode] = useState("camera");
   const [session, setSession] = useState(null);
   const [msg, setMsg] = useState(null);
   const [summary, setSummary] = useState(null);
@@ -322,7 +322,9 @@ export default function Live() {
             {(viewMode === "split" || viewMode === "pip" || viewMode === "ch1") && (
               <div className="vdu-feed-bay tray-feed-bay">
                 <div className="vdu-bay-header">
-                  <span className="channel-tag">CH-01 // TRAY SENSOR (DROIDCAM / PHONE)</span>
+                  <span className="channel-tag">
+                    {msg?.mode === "replay" ? "CH-01 // TRAY SENSOR (BENCH REPLAY)" : "CH-01 // TRAY SENSOR (PHONE / DROIDCAM)"}
+                  </span>
                   <span className="bay-spec">YOLOv8n + BYTETRACK-KF</span>
                 </div>
                 <div className="vdu-bay-canvas-wrap">
@@ -352,7 +354,9 @@ export default function Live() {
             {(viewMode === "split" || viewMode === "pip" || viewMode === "ch2") && (
               <div className={`vdu-feed-bay hand-feed-bay ${viewMode === "pip" ? "pip-inset" : ""}`}>
                 <div className="vdu-bay-header ch2">
-                  <span className="channel-tag">CH-02 // SURGEON HANDS (LAPTOP WEBCAM)</span>
+                  <span className="channel-tag">
+                    {msg?.mode === "replay" ? "CH-02 // SURGEON HANDS (BENCH REPLAY)" : "CH-02 // SURGEON HANDS (LAPTOP WEBCAM)"}
+                  </span>
                   <span className="bay-spec">MEDIAPIPE 3D-LANDMARKS</span>
                 </div>
                 <div className="vdu-bay-canvas-wrap">
@@ -500,25 +504,25 @@ export default function Live() {
                 <div className="hardware-toggle-grid">
                   <button
                     type="button"
+                    className={`toggle-bay-option ${sourceMode === "camera" ? "active" : ""}`}
+                    onClick={() => setSourceMode("camera")}
+                  >
+                    <span className="toggle-indicator-led cyan" />
+                    <div className="toggle-option-text">
+                      <strong className="toggle-name">LIVE HARDWARE DUAL CAM</strong>
+                      <span className="toggle-sub">CH-01 PHONE TRAY (YOLOv8n) + CH-02 LAPTOP HANDS</span>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
                     className={`toggle-bay-option ${sourceMode === "simulation" ? "active" : ""}`}
                     onClick={() => setSourceMode("simulation")}
                   >
                     <span className="toggle-indicator-led amber" />
                     <div className="toggle-option-text">
                       <strong className="toggle-name">REPLAY SIMULATION</strong>
-                      <span className="toggle-sub">RECORDED CLINICAL BENCH CLIP (RECOMMENDED)</span>
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    className={`toggle-bay-option ${sourceMode === "camera" ? "active" : ""}`}
-                    onClick={() => setSourceMode("camera")}
-                  >
-                    <span className="toggle-indicator-led cyan" />
-                    <div className="toggle-option-text">
-                      <strong className="toggle-name">LIVE HARDWARE CAMERA</strong>
-                      <span className="toggle-sub">DIRECT USB 0 / LOCAL WEBCAM (YOLOv8n)</span>
+                      <span className="toggle-sub">RECORDED CLINICAL BENCH CLIP</span>
                     </div>
                   </button>
                 </div>

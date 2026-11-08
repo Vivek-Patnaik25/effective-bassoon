@@ -45,7 +45,13 @@ class SessionPipeline:
         self.gesture_label = "none"
         self.gesture_until = 0.0
         self.source = open_perception(source_mode)
-        self.hand = HandTracker()
+        is_replay = getattr(self.source, "mode", "") == "replay"
+        from pathlib import Path
+        surgeon_clip = Path("samples/surgeon_clip.mp4")
+        if is_replay and surgeon_clip.exists():
+            self.hand = HandTracker(video_path=surgeon_clip)
+        else:
+            self.hand = HandTracker()
         self.hand.open()
         self.engine = EventEngine(self.db, session_id)
         self.task = asyncio.create_task(self._loop())

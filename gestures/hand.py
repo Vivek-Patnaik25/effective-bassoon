@@ -106,9 +106,12 @@ class Debouncer:
 
 
 class HandTracker:
-    """Reads the fixed hand webcam on the same thread as the tool camera."""
+    """Reads the fixed hand webcam or pre-recorded video clip."""
 
-    def __init__(self, camera_index: int | None = None):
+    def __init__(self, camera_index: int | None = None, video_path: str | Path | None = None):
+        if video_path is None:
+            video_path = os.environ.get("HAND_VIDEO")
+        self.video_path = str(video_path) if video_path else None
         if camera_index is None:
             camera_index = int(os.environ.get("HAND_CAMERA", "0"))
         self.camera_index = camera_index
@@ -146,14 +149,19 @@ class HandTracker:
         except Exception as exc:
             print(f"MediaPipe is unavailable ({exc}). Press P to pause and F to mark.")
             return
-        capture = cv2.VideoCapture(self.camera_index, cv2.CAP_DSHOW)
-        if not capture.isOpened():
-            capture.release()
-            capture = cv2.VideoCapture(self.camera_index)
+
+        if self.video_path and Path(self.video_path).exists():
+            capture = cv2.VideoCapture(self.video_path)
+        else:
+            capture = cv2.VideoCapture(self.camera_index, cv2.CAP_DSHOW)
+            if not capture.isOpened():
+                capture.release()
+                capture = cv2.VideoCapture(self.camera_index)
+
         if not capture.isOpened():
             capture.release()
             print(
-                f"Hand camera {self.camera_index} is not available. "
+                f"Hand source {self.video_path or self.camera_index} is not available. "
                 "Press P to pause and F to mark."
             )
             return
@@ -181,6 +189,9 @@ class HandTracker:
         self._timestamp_ms += 100
         try:
             ok, frame = self._capture.read()
+            if not ok and self.video_path:
+                self._capture.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                ok, frame = self._capture.read()
             if ok:
                 rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 image = self._mp.Image(image_format=self._mp.ImageFormat.SRGB, data=rgb)

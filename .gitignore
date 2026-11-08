@@ -26,3 +26,6 @@ web/dist/
 kaggle_res/*.ipynb
 surge_context/*.ipynb
 !surge_context/surge-reason.ipynb
+
+.vercel
+.env*

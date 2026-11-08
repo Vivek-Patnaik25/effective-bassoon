@@ -19,13 +19,13 @@ def read_tools(backend, frame):
     return backend.read_tools(frame)
 
 
-def open_perception():
-    mode = os.environ.get("DETECTION_SOURCE", "replay").strip().lower()
+def open_perception(source_mode: str | None = None):
+    mode = (source_mode or os.environ.get("DETECTION_SOURCE", "yolo")).strip().lower()
     if mode == "yolo":
         yolo = _open_yolo()
         if yolo is not None:
             return yolo
-        print("best.pt is missing or failed to load. Staying on replay.")
+        print("Camera/best.pt failed to load. Falling back to replay simulation.")
     video, labels = ensure_samples()
     return ReplaySource(video, labels)
 
@@ -44,6 +44,7 @@ def _open_yolo():
 
 class ReplaySource:
     def __init__(self, video: Path, labels: Path):
+        self.mode = "replay"
         self.video = video
         self.records = [
             json.loads(line)["tools"]
@@ -83,6 +84,7 @@ class YoloSource:
     def __init__(self, weights: Path, camera_index: int):
         from ultralytics import YOLO
 
+        self.mode = "yolo"
         self.model = YOLO(str(weights))
         self.camera_index = camera_index
         self.capture = cv2.VideoCapture(camera_index)

@@ -18,14 +18,10 @@ gestures/hand_landmarker.task
 web/node_modules/
 web/dist/
 
+# Test coverage
+.coverage
+
 # Exclude notebooks as requested
 *.ipynb
 kaggle_res/*.ipynb
-
-# Exclude internal planning documents (keep only README.md)
-DEPLOYMENT.md
-features.md
-progress.md
-task_split.md
-TEAM_CONTRIBUTIONS.md
-user_stories.md
+surge_context/*.ipynb

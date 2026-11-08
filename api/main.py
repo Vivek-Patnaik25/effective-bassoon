@@ -78,6 +78,7 @@ class LoginBody(BaseModel):
 
 class SessionBody(BaseModel):
     name: str = Field(default="Untitled procedure", max_length=80)
+    mode: str = Field(default="camera", description="Source mode: 'camera' (live webcam + YOLO) or 'simulation' (replay clip)")
 
 
 @app.post("/login")
@@ -105,7 +106,8 @@ async def create_session(
         )
     session = database.create_session(body.name, user["username"])
     if os.environ.get("PIPELINE_AUTOSTART", "1") != "0":
-        await live.start(session["id"])
+        source_mode = "yolo" if body.mode in ("camera", "yolo") else "replay"
+        await live.start(session["id"], source_mode=source_mode)
     return session
 
 

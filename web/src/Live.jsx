@@ -4,6 +4,7 @@ import { COLORS, eventLabel, labelFor } from "./labels";
 
 export default function Live() {
   const [name, setName] = useState("Procedure");
+  const [sourceMode, setSourceMode] = useState("camera");
   const [session, setSession] = useState(null);
   const [msg, setMsg] = useState(null);
   const [summary, setSummary] = useState(null);
@@ -93,7 +94,7 @@ export default function Live() {
     try {
       const created = await api("/sessions", {
         method: "POST",
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, mode: sourceMode }),
       });
       setSummary(null);
       setAlerts([]);
@@ -153,7 +154,7 @@ export default function Live() {
             <div className="hud-left">
               <span className={`hud-chip ${fps >= 15 ? "good" : "warning"}`}>
                 <span className="dot" />
-                {fps} FPS {fps >= 15 ? "(Target Met)" : "(Replay 10 FPS)"}
+                {fps} FPS ({msg.mode === "yolo" ? "Live Webcam" : "Replay Simulation"})
               </span>
               <span className="hud-chip">
                 Tools in view: <strong>{(msg.tools || []).length}</strong>
@@ -204,6 +205,31 @@ export default function Live() {
               Procedure name
               <input value={name} onChange={(event) => setName(event.target.value)} />
             </label>
+            <label>
+              Video Input Source
+              <select
+                value={sourceMode}
+                onChange={(event) => setSourceMode(event.target.value)}
+                style={{
+                  background: "#161b22",
+                  color: "#e6edf3",
+                  border: "1px solid #30363d",
+                  borderRadius: "6px",
+                  padding: "8px 10px",
+                  width: "100%",
+                  marginTop: "4px",
+                  marginBottom: "12px",
+                }}
+              >
+                <option value="camera">Live Tool Webcam (YOLOv8 Detection)</option>
+                <option value="simulation">Replay Simulation Clip (Automated Demo)</option>
+              </select>
+            </label>
+            <p className="muted small" style={{ marginBottom: "12px" }}>
+              {sourceMode === "camera"
+                ? "Connects to your local webcam for real-time instrument tracking."
+                : "Plays the recorded surgical tray scenario clip without requiring a physical camera."}
+            </p>
             <button type="submit" disabled={busy}>Start</button>
           </form>
         )}

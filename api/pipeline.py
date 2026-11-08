@@ -34,7 +34,7 @@ class SessionPipeline:
     def running(self) -> bool:
         return self.task is not None and not self.task.done() and self.session_id is not None
 
-    async def start(self, session_id: int) -> None:
+    async def start(self, session_id: int, source_mode: str | None = None) -> None:
         await self.shutdown()
         self.session_id = session_id
         self.dropped = False
@@ -44,7 +44,7 @@ class SessionPipeline:
         self.last_jpeg = None
         self.gesture_label = "none"
         self.gesture_until = 0.0
-        self.source = open_perception()
+        self.source = open_perception(source_mode)
         self.hand = HandTracker()
         self.hand.open()
         self.engine = EventEngine(self.db, session_id)
@@ -122,9 +122,11 @@ class SessionPipeline:
             gesture_progress = getattr(self.hand, "progress", 0.0)
         event_name = written[-1]["type"] if written else None
         session_id = self.session_id
+        source_mode = getattr(self.source, "mode", "unknown")
         return {
             "ts": _iso(),
             "session_id": str(session_id) if session_id is not None else None,
+            "mode": source_mode,
             "camera_ok": camera_ok,
             "tools": tools,
             "gesture": gesture,

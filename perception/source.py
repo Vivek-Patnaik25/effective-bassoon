@@ -35,7 +35,7 @@ def _open_yolo():
         print("perception/weights/best.pt was not found.")
         return None
     try:
-        camera = int(os.environ.get("TOOL_CAMERA", "0"))
+        camera = int(os.environ.get("TOOL_CAMERA", "1"))
         return YoloSource(WEIGHTS, camera)
     except Exception as exc:
         print(f"YOLO source failed: {exc}")

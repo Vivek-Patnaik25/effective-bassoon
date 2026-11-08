@@ -110,7 +110,7 @@ class HandTracker:
 
     def __init__(self, camera_index: int | None = None):
         if camera_index is None:
-            camera_index = int(os.environ.get("HAND_CAMERA", "1"))
+            camera_index = int(os.environ.get("HAND_CAMERA", "0"))
         self.camera_index = camera_index
         self.available = False
         self.last_frame = None

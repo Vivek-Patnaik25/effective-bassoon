@@ -274,14 +274,14 @@ export default function Live() {
               {/* Top HUD telemetry row */}
               <div className="hud-top-strip">
                 <div className="hud-metric-chip">
-                  <span className="chip-key">TRAY SOURCE</span>
-                  <span className="chip-val">{msg.mode === "yolo" ? "LIVE CAM-0" : "SIMULATION BENCH"}</span>
+                  <span className="chip-key">TRAY FEED</span>
+                  <span className="chip-val">{msg.mode === "yolo" ? "CAM-1 (DROIDCAM TRAY)" : "SIMULATION BENCH"}</span>
                 </div>
 
                 <div className="hud-metric-chip">
-                  <span className="chip-key">HAND SENSOR</span>
+                  <span className="chip-key">SURGEON HANDS</span>
                   <span className={`chip-val ${msg.hand_camera ? "text-emerald" : "text-amber"}`}>
-                    {msg.hand_camera ? "CAM-1 (DROIDCAM)" : "KEYBOARD [P/F]"}
+                    {msg.hand_camera ? "CAM-0 (LAPTOP WEBCAM)" : "KEYBOARD [P/F]"}
                   </span>
                 </div>
 
@@ -318,11 +318,11 @@ export default function Live() {
 
           {/* DUAL VIEWPORT CANVAS LAYOUT */}
           <div className={`screen-viewport-grid mode-${viewMode}`}>
-            {/* BAY 1: CH-01 STERILE TRAY SENSOR */}
+            {/* BAY 1: CH-01 STERILE TRAY SENSOR (DROIDCAM / MOBILE) */}
             {(viewMode === "split" || viewMode === "pip" || viewMode === "ch1") && (
               <div className="vdu-feed-bay tray-feed-bay">
                 <div className="vdu-bay-header">
-                  <span className="channel-tag">CH-01 // TRAY OPTICAL FEED</span>
+                  <span className="channel-tag">CH-01 // TRAY SENSOR (DROIDCAM / PHONE)</span>
                   <span className="bay-spec">YOLOv8n + BYTETRACK-KF</span>
                 </div>
                 <div className="vdu-bay-canvas-wrap">
@@ -333,13 +333,13 @@ export default function Live() {
                         <div className="crosshair-h" />
                         <div className="crosshair-v" />
                         <div className="crosshair-circle" />
-                        <span className="crosshair-coords">[CH-01: TRAY CAMERA]</span>
+                        <span className="crosshair-coords">[CH-01: DROIDCAM TRAY]</span>
                       </div>
                       <div className="standby-telemetry-block">
                         <div className="standby-stamp">TRAY SENSOR STANDBY</div>
                         <div className="standby-specs">
-                          <span>RES: 640x480 @ 30 FPS</span>
-                          <span>YOLOv8n TOOL TRACKING</span>
+                          <span>FEED: DROIDCAM / MOBILE CAM (INDEX 1)</span>
+                          <span>DETECTION: YOLOv8n SURGICAL MODEL</span>
                         </div>
                       </div>
                     </div>
@@ -348,11 +348,11 @@ export default function Live() {
               </div>
             )}
 
-            {/* BAY 2: CH-02 SURGEON GESTURE SENSOR */}
+            {/* BAY 2: CH-02 SURGEON GESTURE SENSOR (LAPTOP WEBCAM) */}
             {(viewMode === "split" || viewMode === "pip" || viewMode === "ch2") && (
               <div className={`vdu-feed-bay hand-feed-bay ${viewMode === "pip" ? "pip-inset" : ""}`}>
                 <div className="vdu-bay-header ch2">
-                  <span className="channel-tag">CH-02 // SURGEON HAND SENSOR</span>
+                  <span className="channel-tag">CH-02 // SURGEON HANDS (LAPTOP WEBCAM)</span>
                   <span className="bay-spec">MEDIAPIPE 3D-LANDMARKS</span>
                 </div>
                 <div className="vdu-bay-canvas-wrap">
@@ -363,15 +363,15 @@ export default function Live() {
                         <div className="crosshair-h" />
                         <div className="crosshair-v" />
                         <div className="crosshair-circle" />
-                        <span className="crosshair-coords">[CH-02: GESTURE ZONE]</span>
+                        <span className="crosshair-coords">[CH-02: LAPTOP WEBCAM]</span>
                       </div>
                       <div className="standby-telemetry-block">
                         <div className="standby-stamp">
-                          {msg?.hand_camera ? "CH-02 READY // AWAITING HAND IN FRAME" : "CH-02 DROIDCAM / CAMERA 1 STANDBY"}
+                          {msg?.hand_camera ? "CH-02 READY // AWAITING SURGEON HANDS" : "CH-02 LAPTOP WEBCAM STANDBY"}
                         </div>
                         <div className="standby-specs">
-                          <span>OPEN PALM HOLD (P)</span>
-                          <span>CLOSED FIST MARK (F)</span>
+                          <span>FEED: BUILT-IN WEBCAM (INDEX 0)</span>
+                          <span>TOUCHLESS GESTURES: OPEN PALM [P] // FIST [F]</span>
                         </div>
                       </div>
                     </div>

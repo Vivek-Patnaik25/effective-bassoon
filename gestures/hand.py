@@ -148,6 +148,9 @@ class HandTracker:
         capture = cv2.VideoCapture(self.camera_index, cv2.CAP_DSHOW)
         if not capture.isOpened():
             capture.release()
+            capture = cv2.VideoCapture(self.camera_index)
+        if not capture.isOpened():
+            capture.release()
             print(
                 f"Hand camera {self.camera_index} is not available. "
                 "Press P to pause and F to mark."

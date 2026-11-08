@@ -23,6 +23,7 @@
 |---|---|
 | `class_distribution.png` | Class distribution chart from training dataset |
 | `inference_samples.png` | Sample inference outputs from trained model |
+| `surge-reason.ipynb` | Model insights, clinical analytics & convergence visualizations notebook |
 | `kaggle_train_yolov8.ipynb` | Local YOLOv8 training notebook |
 | `surge-proj.ipynb` | Main Kaggle notebook (training + evaluation) — copy for reference |
 

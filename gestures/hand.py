@@ -113,6 +113,7 @@ class HandTracker:
             camera_index = int(os.environ.get("HAND_CAMERA", "1"))
         self.camera_index = camera_index
         self.available = False
+        self.last_frame = None
         self._debouncer = Debouncer()
         self._capture = None
         self._landmarker = None
@@ -186,6 +187,26 @@ class HandTracker:
                 result = self._landmarker.detect_for_video(image, self._timestamp_ms)
                 if result.hand_landmarks:
                     raw = classify_landmarks(result.hand_landmarks[0])
+                    h, w, _ = frame.shape
+                    connections = [
+                        (0, 1), (1, 2), (2, 3), (3, 4),
+                        (0, 5), (5, 6), (6, 7), (7, 8),
+                        (5, 9), (9, 10), (10, 11), (11, 12),
+                        (9, 13), (13, 14), (14, 15), (15, 16),
+                        (13, 17), (17, 18), (18, 19), (19, 20),
+                        (0, 17),
+                    ]
+                    for p1, p2 in connections:
+                        lm1, lm2 = result.hand_landmarks[0][p1], result.hand_landmarks[0][p2]
+                        pt1 = (int(lm1.x * w), int(lm1.y * h))
+                        pt2 = (int(lm2.x * w), int(lm2.y * h))
+                        cv2.line(frame, pt1, pt2, (0, 230, 140), 2)
+                    for lm in result.hand_landmarks[0]:
+                        cv2.circle(frame, (int(lm.x * w), int(lm.y * h)), 4, (0, 240, 255), -1)
+                    if raw != "none":
+                        badge_txt = "OPEN PALM // HOLD" if raw == "open_palm" else "CLOSED FIST // MARK"
+                        cv2.putText(frame, badge_txt, (14, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 255, 180), 2)
+                self.last_frame = frame
         except Exception as exc:
             print(f"Hand camera stopped: {exc}")
             self.close()
@@ -195,6 +216,7 @@ class HandTracker:
 
     def close(self) -> None:
         self.available = False
+        self.last_frame = None
         if self._capture is not None:
             self._capture.release()
             self._capture = None

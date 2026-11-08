@@ -918,6 +918,144 @@ body {
   min-height: 480px;
 }
 
+/* VDU Layout Switcher Bank */
+.vdu-layout-switch-bank {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: #06090e;
+  padding: 0.15rem 0.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+}
+
+.vdu-layout-switch {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--color-silver-dim);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 0.25rem 0.55rem;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.vdu-layout-switch:hover {
+  color: var(--color-silver);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.vdu-layout-switch.engaged {
+  background: #141c26;
+  border-color: #38bdf8;
+  color: #38bdf8;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.8), 0 0 8px rgba(56, 189, 248, 0.2);
+}
+
+/* Dual Viewport Grid & Bays */
+.screen-viewport-grid {
+  position: relative;
+  width: 100%;
+  min-height: 480px;
+  background: #020408;
+}
+
+.screen-viewport-grid.mode-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  padding: 0.5rem;
+}
+
+@media (max-width: 960px) {
+  .screen-viewport-grid.mode-split {
+    grid-template-columns: 1fr;
+  }
+}
+
+.screen-viewport-grid.mode-ch1 .tray-feed-bay,
+.screen-viewport-grid.mode-ch2 .hand-feed-bay {
+  width: 100%;
+}
+
+.screen-viewport-grid.mode-pip {
+  position: relative;
+  width: 100%;
+}
+
+.screen-viewport-grid.mode-pip .tray-feed-bay {
+  width: 100%;
+}
+
+.screen-viewport-grid.mode-pip .pip-inset {
+  position: absolute;
+  bottom: 0.75rem;
+  right: 0.75rem;
+  width: 260px;
+  z-index: 12;
+  border: 2px solid #38bdf8;
+  border-radius: 4px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.95), 0 0 12px rgba(56, 189, 248, 0.3);
+  background: #06090e;
+}
+
+.vdu-feed-bay {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: #020408;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.vdu-bay-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.35rem 0.65rem;
+  background: #0d1219;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.vdu-bay-header .channel-tag {
+  color: #38bdf8;
+}
+
+.vdu-bay-header.ch2 .channel-tag {
+  color: #34d399;
+}
+
+.vdu-bay-header .bay-spec {
+  color: var(--color-silver-dim);
+  font-size: 0.6rem;
+}
+
+.vdu-bay-canvas-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  min-height: 240px;
+}
+
+.hand-canvas {
+  filter: contrast(1.05) brightness(1.02);
+}
+
+.hand-standby-grid .crosshair-coords {
+  color: #34d399;
+}
+
 .recessed-canvas {
   width: 100%;
   height: auto;

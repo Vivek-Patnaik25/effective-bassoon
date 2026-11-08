@@ -15,10 +15,13 @@ export default function Live() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   const canvasRef = useRef(null);
+  const handCanvasRef = useRef(null);
   const wsRef = useRef(null);
   const imgRef = useRef(new Image());
+  const handImgRef = useRef(new Image());
   const frameTimesRef = useRef([]);
   const [fps, setFps] = useState(0);
+  const [viewMode, setViewMode] = useState("split"); // "split" | "pip" | "ch1" | "ch2"
 
   // Elapsed procedure timer
   useEffect(() => {
@@ -59,24 +62,36 @@ export default function Live() {
 
   // Frame rendering and FPS calculation
   useEffect(() => {
-    if (!msg?.frame || !canvasRef.current) return;
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-    const image = imgRef.current;
-    const tools = msg.tools || [];
-    image.onload = () => {
-      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-      tools.forEach((tool) => drawTacticalReticle(ctx, tool));
+    if (msg?.frame && canvasRef.current) {
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext("2d");
+      const image = imgRef.current;
+      const tools = msg.tools || [];
+      image.onload = () => {
+        ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+        tools.forEach((tool) => drawTacticalReticle(ctx, tool));
 
-      const now = performance.now();
-      const times = frameTimesRef.current;
-      times.push(now);
-      while (times.length > 0 && times[0] <= now - 1000) {
-        times.shift();
-      }
-      setFps(times.length);
-    };
-    image.src = `data:image/jpeg;base64,${msg.frame}`;
+        const now = performance.now();
+        const times = frameTimesRef.current;
+        times.push(now);
+        while (times.length > 0 && times[0] <= now - 1000) {
+          times.shift();
+        }
+        setFps(times.length);
+      };
+      image.src = `data:image/jpeg;base64,${msg.frame}`;
+    }
+
+    // Render secondary surgeon hand camera
+    if (msg?.hand_frame && handCanvasRef.current) {
+      const hCanvas = handCanvasRef.current;
+      const hCtx = hCanvas.getContext("2d");
+      const hImage = handImgRef.current;
+      hImage.onload = () => {
+        hCtx.drawImage(hImage, 0, 0, hCanvas.width, hCanvas.height);
+      };
+      hImage.src = `data:image/jpeg;base64,${msg.hand_frame}`;
+    }
   }, [msg]);
 
   const lastGestureRef = useRef("none");
@@ -183,8 +198,43 @@ export default function Live() {
         <div className="monitor-top-bezel">
           <div className="bezel-screw tl">⊕</div>
           <div className="bezel-left-meta">
-            <span className="bezel-label">VIDEO DISPLAY UNIT // CH-01</span>
-            <span className="bezel-badge">OPTICAL SENSOR CALIBRATED</span>
+            <span className="bezel-label">VDU DUAL-CH-01/02</span>
+            <span className="bezel-badge">OPTICAL HUD</span>
+          </div>
+
+          <div className="vdu-layout-switch-bank">
+            <button
+              type="button"
+              className={`vdu-layout-switch ${viewMode === "split" ? "engaged" : ""}`}
+              onClick={() => setViewMode("split")}
+              title="Dual Screen: Side-by-Side (Tray + Hands)"
+            >
+              DUAL SPLIT
+            </button>
+            <button
+              type="button"
+              className={`vdu-layout-switch ${viewMode === "pip" ? "engaged" : ""}`}
+              onClick={() => setViewMode("pip")}
+              title="Picture-in-Picture Mode"
+            >
+              PiP
+            </button>
+            <button
+              type="button"
+              className={`vdu-layout-switch ${viewMode === "ch1" ? "engaged" : ""}`}
+              onClick={() => setViewMode("ch1")}
+              title="Channel 01: Tool Tray Only"
+            >
+              CH-01 TRAY
+            </button>
+            <button
+              type="button"
+              className={`vdu-layout-switch ${viewMode === "ch2" ? "engaged" : ""}`}
+              onClick={() => setViewMode("ch2")}
+              title="Channel 02: Surgeon Hands Only"
+            >
+              CH-02 HANDS
+            </button>
           </div>
 
           <div className="bezel-center-indicators">
@@ -224,8 +274,15 @@ export default function Live() {
               {/* Top HUD telemetry row */}
               <div className="hud-top-strip">
                 <div className="hud-metric-chip">
-                  <span className="chip-key">SOURCE</span>
-                  <span className="chip-val">{msg.mode === "yolo" ? "LIVE CAMERA (YOLOv8)" : "SIMULATION BENCH"}</span>
+                  <span className="chip-key">TRAY SOURCE</span>
+                  <span className="chip-val">{msg.mode === "yolo" ? "LIVE CAM-0" : "SIMULATION BENCH"}</span>
+                </div>
+
+                <div className="hud-metric-chip">
+                  <span className="chip-key">HAND SENSOR</span>
+                  <span className={`chip-val ${msg.hand_camera ? "text-emerald" : "text-amber"}`}>
+                    {msg.hand_camera ? "CAM-1 (DROIDCAM)" : "KEYBOARD [P/F]"}
+                  </span>
                 </div>
 
                 {msg.gesture_raw && msg.gesture_raw !== "none" && (msg.gesture_progress || 0) > 0 && (
@@ -259,8 +316,70 @@ export default function Live() {
             </div>
           )}
 
-          {/* Active Canvas Video Feed */}
-          <canvas ref={canvasRef} width="640" height="480" className="recessed-canvas" />
+          {/* DUAL VIEWPORT CANVAS LAYOUT */}
+          <div className={`screen-viewport-grid mode-${viewMode}`}>
+            {/* BAY 1: CH-01 STERILE TRAY SENSOR */}
+            {(viewMode === "split" || viewMode === "pip" || viewMode === "ch1") && (
+              <div className="vdu-feed-bay tray-feed-bay">
+                <div className="vdu-bay-header">
+                  <span className="channel-tag">CH-01 // TRAY OPTICAL FEED</span>
+                  <span className="bay-spec">YOLOv8n + BYTETRACK-KF</span>
+                </div>
+                <div className="vdu-bay-canvas-wrap">
+                  <canvas ref={canvasRef} width="640" height="480" className="recessed-canvas" />
+                  {!session && (
+                    <div className="screen-standby-grid">
+                      <div className="standby-crosshair-center">
+                        <div className="crosshair-h" />
+                        <div className="crosshair-v" />
+                        <div className="crosshair-circle" />
+                        <span className="crosshair-coords">[CH-01: TRAY CAMERA]</span>
+                      </div>
+                      <div className="standby-telemetry-block">
+                        <div className="standby-stamp">TRAY SENSOR STANDBY</div>
+                        <div className="standby-specs">
+                          <span>RES: 640x480 @ 30 FPS</span>
+                          <span>YOLOv8n TOOL TRACKING</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* BAY 2: CH-02 SURGEON GESTURE SENSOR */}
+            {(viewMode === "split" || viewMode === "pip" || viewMode === "ch2") && (
+              <div className={`vdu-feed-bay hand-feed-bay ${viewMode === "pip" ? "pip-inset" : ""}`}>
+                <div className="vdu-bay-header ch2">
+                  <span className="channel-tag">CH-02 // SURGEON HAND SENSOR</span>
+                  <span className="bay-spec">MEDIAPIPE 3D-LANDMARKS</span>
+                </div>
+                <div className="vdu-bay-canvas-wrap">
+                  <canvas ref={handCanvasRef} width="640" height="480" className="recessed-canvas hand-canvas" />
+                  {(!msg || !msg.hand_frame) && (
+                    <div className="screen-standby-grid hand-standby-grid">
+                      <div className="standby-crosshair-center">
+                        <div className="crosshair-h" />
+                        <div className="crosshair-v" />
+                        <div className="crosshair-circle" />
+                        <span className="crosshair-coords">[CH-02: GESTURE ZONE]</span>
+                      </div>
+                      <div className="standby-telemetry-block">
+                        <div className="standby-stamp">
+                          {msg?.hand_camera ? "CH-02 READY // AWAITING HAND IN FRAME" : "CH-02 DROIDCAM / CAMERA 1 STANDBY"}
+                        </div>
+                        <div className="standby-specs">
+                          <span>OPEN PALM HOLD (P)</span>
+                          <span>CLOSED FIST MARK (F)</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Camera Lost Watchdog Hardware Alarm */}
           {msg && msg.camera_ok === false && (
@@ -271,27 +390,6 @@ export default function Live() {
                 <button type="button" className="mech-btn-danger" onClick={restoreCamera}>
                   [ RESTORE SENSOR FEED ]
                 </button>
-              </div>
-            </div>
-          )}
-
-          {/* Standby State: Precision Grid & Technical Crosshair */}
-          {!session && (
-            <div className="screen-standby-grid">
-              <div className="standby-crosshair-center">
-                <div className="crosshair-h" />
-                <div className="crosshair-v" />
-                <div className="crosshair-circle" />
-                <span className="crosshair-coords">[X: 320.00  Y: 240.00]</span>
-              </div>
-              <div className="standby-telemetry-block">
-                <div className="standby-stamp">OPTICAL INFERENCE STANDBY</div>
-                <div className="standby-specs">
-                  <span>RES: 640 x 480 @ 30 FPS</span>
-                  <span>AI MODEL: YOLOv8n-SURGICAL</span>
-                  <span>BENCHMARK: 0.9408 mAP@0.5</span>
-                  <span>DEBOUNCE: 10f ENTER // 15f EXIT</span>
-                </div>
               </div>
             </div>
           )}

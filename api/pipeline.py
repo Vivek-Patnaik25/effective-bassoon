@@ -123,6 +123,9 @@ class SessionPipeline:
         event_name = written[-1]["type"] if written else None
         session_id = self.session_id
         source_mode = getattr(self.source, "mode", "unknown")
+        hand_jpeg = None
+        if self.hand and getattr(self.hand, "last_frame", None) is not None:
+            hand_jpeg = _jpeg(self.hand.last_frame)
         return {
             "ts": _iso(),
             "session_id": str(session_id) if session_id is not None else None,
@@ -137,6 +140,7 @@ class SessionPipeline:
             "paused": bool(self.engine and self.engine.paused),
             "hand_camera": bool(self.hand and self.hand.available),
             "frame": self.last_jpeg if camera_ok else None,
+            "hand_frame": hand_jpeg,
             "log": self.db.recent_events(session_id, 30) if session_id else [],
         }
 

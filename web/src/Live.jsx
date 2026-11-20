@@ -4,7 +4,7 @@ import { CATEGORIES, COLORS, SHORT_LABELS, eventLabel, labelFor } from "./labels
 
 export default function Live() {
   const [name, setName] = useState("PROCEDURE-REF-08 // LAPAROSCOPIC CHOLECYSTECTOMY");
-  const [sourceMode, setSourceMode] = useState("camera");
+  const [sourceMode, setSourceMode] = useState("demo");
   const [session, setSession] = useState(null);
   const [msg, setMsg] = useState(null);
   const [summary, setSummary] = useState(null);
@@ -275,13 +275,23 @@ export default function Live() {
               <div className="hud-top-strip">
                 <div className="hud-metric-chip">
                   <span className="chip-key">TRAY FEED</span>
-                  <span className="chip-val">{msg.mode === "yolo" ? "CAM-1 (DROIDCAM TRAY)" : "SIMULATION BENCH"}</span>
+                  <span className="chip-val">
+                    {msg.mode === "demo"
+                      ? "CH-01 TOOL TRAY (YOLOv8n)"
+                      : msg.mode === "yolo"
+                      ? "CAM-1 (DROIDCAM TRAY)"
+                      : "SIMULATION BENCH"}
+                  </span>
                 </div>
 
                 <div className="hud-metric-chip">
                   <span className="chip-key">SURGEON HANDS</span>
                   <span className={`chip-val ${msg.hand_camera ? "text-emerald" : "text-amber"}`}>
-                    {msg.hand_camera ? "CAM-0 (LAPTOP WEBCAM)" : "KEYBOARD [P/F]"}
+                    {msg.mode === "demo"
+                      ? "CH-02 SURGEON GESTURES (MediaPipe)"
+                      : msg.hand_camera
+                      ? "CAM-0 (LAPTOP WEBCAM)"
+                      : "KEYBOARD [P/F]"}
                   </span>
                 </div>
 
@@ -323,9 +333,13 @@ export default function Live() {
               <div className="vdu-feed-bay tray-feed-bay">
                 <div className="vdu-bay-header">
                   <span className="channel-tag">
-                    {msg?.mode === "replay" ? "CH-01 // TRAY SENSOR (BENCH REPLAY)" : "CH-01 // TRAY SENSOR (PHONE / DROIDCAM)"}
+                    {msg?.mode === "demo"
+                      ? "CH-01 // TRAY SENSOR (DEMO: tool_tray.mp4)"
+                      : msg?.mode === "replay"
+                      ? "CH-01 // TRAY SENSOR (BENCH REPLAY)"
+                      : "CH-01 // TRAY SENSOR (PHONE / DROIDCAM)"}
                   </span>
-                  <span className="bay-spec">YOLOv8n + BYTETRACK-KF</span>
+                  <span className="bay-spec">{msg?.mode === "demo" ? "YOLOv8n (REAL-TIME TRACK)" : "YOLOv8n + BYTETRACK-KF"}</span>
                 </div>
                 <div className="vdu-bay-canvas-wrap">
                   <canvas ref={canvasRef} width="640" height="480" className="recessed-canvas" />
@@ -355,9 +369,13 @@ export default function Live() {
               <div className={`vdu-feed-bay hand-feed-bay ${viewMode === "pip" ? "pip-inset" : ""}`}>
                 <div className="vdu-bay-header ch2">
                   <span className="channel-tag">
-                    {msg?.mode === "replay" ? "CH-02 // SURGEON HANDS (BENCH REPLAY)" : "CH-02 // SURGEON HANDS (LAPTOP WEBCAM)"}
+                    {msg?.mode === "demo"
+                      ? "CH-02 // SURGEON HANDS (DEMO: surgeon_view.mp4)"
+                      : msg?.mode === "replay"
+                      ? "CH-02 // SURGEON HANDS (BENCH REPLAY)"
+                      : "CH-02 // SURGEON HANDS (LAPTOP WEBCAM)"}
                   </span>
-                  <span className="bay-spec">MEDIAPIPE 3D-LANDMARKS</span>
+                  <span className="bay-spec">{msg?.mode === "demo" ? "MEDIAPIPE (OPEN PALM / FIST)" : "MEDIAPIPE 3D-LANDMARKS"}</span>
                 </div>
                 <div className="vdu-bay-canvas-wrap">
                   <canvas ref={handCanvasRef} width="640" height="480" className="recessed-canvas hand-canvas" />
@@ -504,13 +522,25 @@ export default function Live() {
                 <div className="hardware-toggle-grid">
                   <button
                     type="button"
+                    className={`toggle-bay-option ${sourceMode === "demo" ? "active" : ""}`}
+                    onClick={() => setSourceMode("demo")}
+                  >
+                    <span className="toggle-indicator-led cyan" />
+                    <div className="toggle-option-text">
+                      <strong className="toggle-name">DEMO PRESENTATION (DUAL VIDEO)</strong>
+                      <span className="toggle-sub">CH-01 TOOL TRAY (YOLOv8n) + CH-02 SURGEON GESTURES (surgeon_view.mp4)</span>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
                     className={`toggle-bay-option ${sourceMode === "camera" ? "active" : ""}`}
                     onClick={() => setSourceMode("camera")}
                   >
                     <span className="toggle-indicator-led cyan" />
                     <div className="toggle-option-text">
                       <strong className="toggle-name">LIVE HARDWARE DUAL CAM</strong>
-                      <span className="toggle-sub">CH-01 PHONE TRAY (YOLOv8n) + CH-02 LAPTOP HANDS</span>
+                      <span className="toggle-sub">CH-01 PHONE TRAY (YOLOv8n) + CH-02 LAPTOP HANDS (WEBCAM)</span>
                     </div>
                   </button>
 
@@ -522,7 +552,7 @@ export default function Live() {
                     <span className="toggle-indicator-led amber" />
                     <div className="toggle-option-text">
                       <strong className="toggle-name">REPLAY SIMULATION</strong>
-                      <span className="toggle-sub">RECORDED CLINICAL BENCH CLIP</span>
+                      <span className="toggle-sub">SYNTHETIC CLINICAL BENCH CLIP</span>
                     </div>
                   </button>
                 </div>

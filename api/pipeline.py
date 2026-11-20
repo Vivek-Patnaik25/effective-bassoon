@@ -45,10 +45,15 @@ class SessionPipeline:
         self.gesture_label = "none"
         self.gesture_until = 0.0
         self.source = open_perception(source_mode)
+        is_demo = getattr(self.source, "mode", "") == "demo" or source_mode in ("demo", "presentation")
         is_replay = getattr(self.source, "mode", "") == "replay"
         from pathlib import Path
+        import os
+        surgeon_view = Path(os.environ.get("SURGEON_VIDEO", "surgeon_view.mp4"))
         surgeon_clip = Path("samples/surgeon_clip.mp4")
-        if is_replay and surgeon_clip.exists():
+        if is_demo and surgeon_view.exists():
+            self.hand = HandTracker(video_path=surgeon_view)
+        elif is_replay and surgeon_clip.exists():
             self.hand = HandTracker(video_path=surgeon_clip)
         else:
             self.hand = HandTracker()

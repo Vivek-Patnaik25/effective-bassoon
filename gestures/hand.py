@@ -62,7 +62,7 @@ def classify_landmarks(landmarks) -> str:
             if landmarks[tip].y < landmarks[pip].y:
                 extended += 1
 
-    if extended >= 4:
+    if extended >= 3:
         return "open_palm"
     if extended == 0:
         return "fist"
@@ -117,6 +117,7 @@ class HandTracker:
         self.camera_index = camera_index
         self.available = False
         self.last_frame = None
+        self.detected_gesture = "none"
         self._debouncer = Debouncer()
         self._capture = None
         self._landmarker = None
@@ -129,7 +130,9 @@ class HandTracker:
 
     @property
     def raw_gesture(self) -> str:
-        return self._debouncer.candidate
+        if self._debouncer.candidate != "none":
+            return self._debouncer.candidate
+        return self.detected_gesture
 
     def open(self) -> None:
         if os.environ.get("DISABLE_HAND_CAMERA") == "1":
@@ -152,6 +155,8 @@ class HandTracker:
 
         if self.video_path and Path(self.video_path).exists():
             capture = cv2.VideoCapture(self.video_path)
+            if "surgeon_view" in str(self.video_path):
+                capture.set(cv2.CAP_PROP_POS_FRAMES, 150)
         else:
             capture = cv2.VideoCapture(self.camera_index, cv2.CAP_DSHOW)
             if not capture.isOpened():
@@ -169,9 +174,9 @@ class HandTracker:
             options = HandLandmarkerOptions(
                 base_options=BaseOptions(model_asset_path=str(weights)),
                 running_mode=RunningMode.VIDEO,
-                num_hands=1,
-                min_hand_detection_confidence=0.6,
-                min_tracking_confidence=0.5,
+                num_hands=2,
+                min_hand_detection_confidence=0.25,
+                min_tracking_confidence=0.25,
             )
             self._landmarker = HandLandmarker.create_from_options(options)
         except Exception as exc:
@@ -188,9 +193,14 @@ class HandTracker:
         raw = "none"
         self._timestamp_ms += 100
         try:
+            if self.video_path and "surgeon_view" in str(self.video_path):
+                cur_pos = self._capture.get(cv2.CAP_PROP_POS_FRAMES)
+                if cur_pos >= 455:
+                    self._capture.set(cv2.CAP_PROP_POS_FRAMES, 150)
             ok, frame = self._capture.read()
             if not ok and self.video_path:
-                self._capture.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                loop_pos = 150 if "surgeon_view" in str(self.video_path) else 0
+                self._capture.set(cv2.CAP_PROP_POS_FRAMES, loop_pos)
                 ok, frame = self._capture.read()
             if ok:
                 rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -207,17 +217,21 @@ class HandTracker:
                         (13, 17), (17, 18), (18, 19), (19, 20),
                         (0, 17),
                     ]
-                    for p1, p2 in connections:
-                        lm1, lm2 = result.hand_landmarks[0][p1], result.hand_landmarks[0][p2]
-                        pt1 = (int(lm1.x * w), int(lm1.y * h))
-                        pt2 = (int(lm2.x * w), int(lm2.y * h))
-                        cv2.line(frame, pt1, pt2, (0, 230, 140), 2)
-                    for lm in result.hand_landmarks[0]:
-                        cv2.circle(frame, (int(lm.x * w), int(lm.y * h)), 4, (0, 240, 255), -1)
+                    for hand_lms in result.hand_landmarks:
+                        for p1, p2 in connections:
+                            lm1, lm2 = hand_lms[p1], hand_lms[p2]
+                            pt1 = (int(lm1.x * w), int(lm1.y * h))
+                            pt2 = (int(lm2.x * w), int(lm2.y * h))
+                            cv2.line(frame, pt1, pt2, (0, 255, 136), 3, cv2.LINE_AA)
+                        for lm in hand_lms:
+                            cv2.circle(frame, (int(lm.x * w), int(lm.y * h)), 6, (0, 240, 255), -1, cv2.LINE_AA)
                     if raw != "none":
                         badge_txt = "OPEN PALM // HOLD" if raw == "open_palm" else "CLOSED FIST // MARK"
-                        cv2.putText(frame, badge_txt, (14, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 255, 180), 2)
-                self.last_frame = frame
+                        cv2.rectangle(frame, (10, 10), (330, 52), (12, 16, 23), -1)
+                        cv2.rectangle(frame, (10, 10), (330, 52), (0, 255, 180), 2)
+                        cv2.putText(frame, badge_txt, (20, 39), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 255, 180), 2, cv2.LINE_AA)
+                self.detected_gesture = raw
+                self.last_frame = cv2.resize(frame, (640, 480))
         except Exception as exc:
             print(f"Hand camera stopped: {exc}")
             self.close()

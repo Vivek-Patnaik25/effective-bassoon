@@ -29,3 +29,13 @@ surge_context/*.ipynb
 
 .vercel
 .env*
+
+# Executables & CLI binaries
+bin/
+*.exe
+*.zip
+
+# Local documentation, office binary reports & scratch (kept off git repo)
+docs/
+*.docx
+*.pdf

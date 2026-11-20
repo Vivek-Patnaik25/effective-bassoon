@@ -78,7 +78,7 @@ class LoginBody(BaseModel):
 
 class SessionBody(BaseModel):
     name: str = Field(default="Untitled procedure", max_length=80)
-    mode: str = Field(default="camera", description="Source mode: 'camera' (live webcam + YOLO) or 'simulation' (replay clip)")
+    mode: str = Field(default="demo", description="Source mode: 'demo' (tool_tray + surgeon_view), 'camera' (live webcam + YOLO), or 'simulation' (replay clip)")
 
 
 @app.post("/login")
@@ -100,13 +100,20 @@ async def create_session(
 ):
     active = database.active_session()
     if active is not None:
-        raise HTTPException(
-            status_code=409,
-            detail={"message": "A session is already open", "session_id": active["id"]},
-        )
+        # Gracefully close any stale or previous open session
+        if live.running():
+            live.request_stop()
+            await live.shutdown()
+        database.end_session(active["id"])
+
     session = database.create_session(body.name, user["username"])
     if os.environ.get("PIPELINE_AUTOSTART", "1") != "0":
-        source_mode = "yolo" if body.mode in ("camera", "yolo") else "replay"
+        if body.mode in ("demo", "presentation"):
+            source_mode = "demo"
+        elif body.mode in ("camera", "yolo", "live"):
+            source_mode = "yolo"
+        else:
+            source_mode = "replay"
         await live.start(session["id"], source_mode=source_mode)
     return session
 

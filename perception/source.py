@@ -20,7 +20,12 @@ def read_tools(backend, frame):
 
 
 def open_perception(source_mode: str | None = None):
-    mode = (source_mode or os.environ.get("DETECTION_SOURCE", "yolo")).strip().lower()
+    mode = (source_mode or os.environ.get("DETECTION_SOURCE", "demo")).strip().lower()
+    if mode in ("demo", "presentation", "video"):
+        tray_video = Path(os.environ.get("TRAY_VIDEO", "tool_tray.mp4"))
+        if tray_video.exists() and WEIGHTS.exists():
+            return YoloVideoSource(WEIGHTS, tray_video)
+        print("tool_tray.mp4 or best.pt missing for demo. Falling back to yolo/replay.")
     if mode in ("yolo", "camera", "live"):
         yolo = _open_yolo()
         if yolo is not None:
@@ -40,6 +45,74 @@ def _open_yolo():
     except Exception as exc:
         print(f"YOLO source failed: {exc}")
         return None
+
+
+class YoloVideoSource:
+    """Runs real YOLOv8n + ByteTrack on a recorded surgical tray video file."""
+
+    def __init__(self, weights: Path, video_path: Path | str):
+        from ultralytics import YOLO
+
+        self.mode = "demo"
+        self.weights = Path(weights)
+        self.video_path = str(video_path)
+        self.model = YOLO(str(weights))
+        self.capture = cv2.VideoCapture(self.video_path)
+        if not self.capture.isOpened():
+            raise RuntimeError(f"Tool video {self.video_path} did not open.")
+        self.names = self.model.names
+        self.eof = False
+
+    def read(self):
+        if not self.capture.isOpened():
+            self.capture.open(self.video_path)
+            if not self.capture.isOpened():
+                return None, []
+        ok, frame = self.capture.read()
+        if not ok:
+            self.rewind()
+            ok, frame = self.capture.read()
+        if not ok:
+            return None, []
+        frame_resized = cv2.resize(frame, (640, 480))
+        return frame_resized, self.read_tools(frame_resized)
+
+    def read_tools(self, frame):
+        results = self.model.track(
+            frame,
+            persist=True,
+            tracker="bytetrack.yaml",
+            verbose=False,
+        )
+        tools = []
+        for result in results:
+            boxes = result.boxes
+            if boxes is None:
+                continue
+            names = result.names or self.names
+            for box in boxes:
+                conf = float(box.conf[0])
+                cls_id = int(box.cls[0])
+                name = str(names.get(cls_id, names[cls_id]) if isinstance(names, dict) else names[cls_id])
+                x1, y1, x2, y2 = [float(v) for v in box.xyxy[0].tolist()]
+                track_id = int(box.id[0]) if box.id is not None else cls_id
+                tools.append(
+                    {
+                        "track_id": track_id,
+                        "class": name,
+                        "conf": round(conf, 4),
+                        "bbox": [int(x1), int(y1), int(x2 - x1), int(y2 - y1)],
+                        "loggable": conf >= CONF_MIN,
+                    }
+                )
+        return tools
+
+    def rewind(self):
+        self.capture.set(cv2.CAP_PROP_POS_FRAMES, 0)
+        self.eof = False
+
+    def close(self):
+        self.capture.release()
 
 
 class ReplaySource:
